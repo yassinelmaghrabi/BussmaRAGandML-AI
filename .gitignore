@@ -1,0 +1,51 @@
+# Node.js dependencies
+frontend/node_modules/
+backend/node_modules/
+
+# Python virtual environments
+backend/venv/
+backend/.venv/
+venv/
+.venv/
+
+# Build outputs
+frontend/dist/
+backend/__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local environment files (store secrets here instead of in code)
+.env
+*.env
+.env.*
+
+# Docker-related
+**/.dockerignore
+**/Dockerfile.*
+**/docker-compose.override.yml
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# IDE / editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Cache
+.cache/
+frontend/.vite/
+
