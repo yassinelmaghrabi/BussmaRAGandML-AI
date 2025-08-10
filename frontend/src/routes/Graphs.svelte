@@ -6,6 +6,53 @@
   let showPredictConfig = false;
   let container: HTMLDivElement;
 
+  // Helper function to determine if a value should be numeric
+  function isNumericField(key: string): boolean {
+    const numericFields = [
+      "min_support",
+      "min_confidence",
+      "min_lift",
+      "max_len",
+      "top_n_brands",
+      "min_brand_count",
+      "max_rules_display",
+      "figure_width",
+      "figure_height",
+      "min_product_count",
+      "top_n_products",
+      "cooccurrence_percentile",
+      "lift_threshold",
+      "max_connections",
+      "dbscan_min_samples",
+      "max_clusters_display",
+      "node_size_multiplier",
+      "sequence_length",
+      "forecast_periods",
+      "smoothing_span",
+      "lstm_units",
+      "lstm_epochs",
+      "dropout_rate",
+      "confidence_level",
+      "remove_last_n",
+    ];
+    return numericFields.includes(key);
+  }
+
+  // Helper function to convert config values to proper types
+  function processConfig(config: Record<string, any>): Record<string, any> {
+    const processed = { ...config };
+    for (const [key, value] of Object.entries(processed)) {
+      if (isNumericField(key)) {
+        processed[key] = typeof value === "string" ? Number(value) : value;
+      } else if (typeof value === "string") {
+        // Handle boolean strings
+        if (value === "true") processed[key] = true;
+        else if (value === "false") processed[key] = false;
+      }
+    }
+    return processed;
+  }
+
   // Defaults for Rules
   let rulesConfig = {
     brand_col: "brand_name",
@@ -61,9 +108,10 @@
   };
 
   async function fetchGraph(endpoint: string, params: Record<string, any>) {
+    const processedParams = processConfig(params);
     const query = new URLSearchParams(
       Object.fromEntries(
-        Object.entries(params).map(([k, v]) => [k, String(v)]),
+        Object.entries(processedParams).map(([k, v]) => [k, String(v)]),
       ),
     );
     const res = await fetch(`${API_BASE_URL}/${endpoint}?${query}`);
@@ -83,10 +131,11 @@
   }
 
   async function fetchPredictSales(config: Record<string, any>) {
+    const processedConfig = processConfig(config);
     const res = await fetch(`${API_BASE_URL}/predict-sales`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(config),
+      body: JSON.stringify(processedConfig),
     });
     const html = await res.text();
     container.innerHTML = html;
@@ -104,89 +153,111 @@
   }
 </script>
 
-<h1>AI/ML Graphs</h1>
+<div class="graphs-gradient">
+  <h1>AI/ML Graphs</h1>
 
-<!-- Top level buttons -->
-<button
-  on:click={() => {
-    showRulesConfig = !showRulesConfig;
-    showGraphConfig = false;
-    showPredictConfig = false;
-  }}
->
-  Configure & Render Association Rules
-</button>
-<button
-  on:click={() => {
-    showGraphConfig = !showGraphConfig;
-    showRulesConfig = false;
-    showPredictConfig = false;
-  }}
->
-  Configure & Render Association Graph
-</button>
-<button
-  on:click={() => {
-    showPredictConfig = !showPredictConfig;
-    showRulesConfig = false;
-    showGraphConfig = false;
-  }}
->
-  Configure & Run Sales Prediction
-</button>
-
-<!-- Rules Config -->
-{#if showRulesConfig}
-  <h2>Association Rules Config</h2>
-  {#each Object.entries(rulesConfig) as [key, value]}
-    <label>{key}: <input bind:value={rulesConfig[key]} /></label><br />
-  {/each}
-  <button on:click={() => fetchGraph("association-rules", rulesConfig)}>
-    Render Graph
+  <!-- Top level buttons -->
+  <button
+    on:click={() => {
+      showRulesConfig = !showRulesConfig;
+      showGraphConfig = false;
+      showPredictConfig = false;
+    }}
+  >
+    Configure & Render Association Rules
   </button>
-{/if}
-
-<!-- Graph Config -->
-{#if showGraphConfig}
-  <h2>Association Graph Config</h2>
-  {#each Object.entries(graphConfig) as [key, value]}
-    <label>{key}: <input bind:value={graphConfig[key]} /></label><br />
-  {/each}
-  <button on:click={() => fetchGraph("association-graph", graphConfig)}>
-    Render Graph
+  <button
+    on:click={() => {
+      showGraphConfig = !showGraphConfig;
+      showRulesConfig = false;
+      showPredictConfig = false;
+    }}
+  >
+    Configure & Render Association Graph
   </button>
-{/if}
-
-<!-- Predict Sales Config -->
-{#if showPredictConfig}
-  <h2>Predict Sales Config</h2>
-  {#each Object.entries(predictSalesConfig) as [key, value]}
-    <label>{key}: <input bind:value={predictSalesConfig[key]} /></label><br />
-  {/each}
-  <button on:click={() => fetchPredictSales(predictSalesConfig)}>
-    Run Prediction
+  <button
+    on:click={() => {
+      showPredictConfig = !showPredictConfig;
+      showRulesConfig = false;
+      showGraphConfig = false;
+    }}
+  >
+    Configure & Run Sales Prediction
   </button>
-{/if}
 
-<!-- Output -->
-<div bind:this={container}></div>
+  <!-- Rules Config -->
+  {#if showRulesConfig}
+    <h2>Association Rules Config</h2>
+    {#each Object.entries(rulesConfig) as [key, value]}
+      <label>
+        {key}:
+        <input
+          bind:value={rulesConfig[key]}
+          type={isNumericField(key) ? "number" : "text"}
+          step={isNumericField(key) &&
+          (key.includes("min_support") ||
+            key.includes("min_confidence") ||
+            key.includes("dropout_rate") ||
+            key.includes("confidence_level"))
+            ? "0.01"
+            : "1"}
+        />
+      </label><br />
+    {/each}
+    <button on:click={() => fetchGraph("association-rules", rulesConfig)}>
+      Render Graph
+    </button>
+  {/if}
+
+  <!-- Graph Config -->
+  {#if showGraphConfig}
+    <h2>Association Graph Config</h2>
+    {#each Object.entries(graphConfig) as [key, value]}
+      <label>
+        {key}:
+        <input
+          bind:value={graphConfig[key]}
+          type={isNumericField(key) ? "number" : "text"}
+          step={isNumericField(key) &&
+          (key.includes("cooccurrence_percentile") ||
+            key.includes("lift_threshold") ||
+            key.includes("node_size_multiplier"))
+            ? "0.1"
+            : "1"}
+        />
+      </label><br />
+    {/each}
+    <button on:click={() => fetchGraph("association-graph", graphConfig)}>
+      Render Graph
+    </button>
+  {/if}
+
+  <!-- Predict Sales Config -->
+  {#if showPredictConfig}
+    <h2>Predict Sales Config</h2>
+    {#each Object.entries(predictSalesConfig) as [key, value]}
+      <label>
+        {key}:
+        <input
+          bind:value={predictSalesConfig[key]}
+          type={isNumericField(key) ? "number" : "text"}
+          step={isNumericField(key) &&
+          (key.includes("dropout_rate") || key.includes("confidence_level"))
+            ? "0.01"
+            : "1"}
+        />
+      </label><br />
+    {/each}
+    <button on:click={() => fetchPredictSales(predictSalesConfig)}>
+      Run Prediction
+    </button>
+  {/if}
+
+  <!-- Output -->
+  <div bind:this={container}></div>
+</div>
 
 <style>
-  /* Overall background and font */
-  .graphs-gradient {
-    background: radial-gradient(
-      ellipse at 50% 50%,
-      #0f766e 0%,
-      /* teal-800 */ #164e63 50%,
-      /* cyan-900 */ #082f49 100% /* deeper blue-gray */
-    );
-    color: #e0f2f1; /* light teal text */
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    min-height: auto;
-    padding: 20px;
-    box-sizing: border-box;
-  }
-
   /* Headers */
   h1,
   h2 {
@@ -234,10 +305,5 @@
     outline: none;
     border-color: #a5d6a7;
     background-color: #1a4f48;
-  }
-
-  /* Output container remains clean for Plotly */
-  .graphs-gradient > div {
-    margin-top: 20px;
   }
 </style>
